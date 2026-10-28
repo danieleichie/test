@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Currency Rates</title>
+<style>
+:root{
+  --bg:#EEF2F1; --surface:#FFFFFF; --ink:#12263A; --muted:#5B6B7A; --rule:#D5DDDB;
+  --accent:#2B50F0; --on-accent:#FFFFFF; --gain:#0F7A55; --loss:#C2391F;
+  --serif: ui-serif, "New York", Georgia, "Times New Roman", serif;
+  --sans: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0E1A24; --surface:#152633; --ink:#E6EEF2; --muted:#93A4B1; --rule:#27394A;
+    --accent:#7C98FF; --on-accent:#0E1A24; --gain:#3DD598; --loss:#FF8A6B;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans)}
+.wrap{max-width:1040px;margin:0 auto;padding:24px}
+p{margin:0}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--rule)}
+.brand{font:600 22px/1.2 var(--serif);margin:0}
+#status{color:var(--muted);font-size:14px;max-width:64ch}
+#status.err{color:var(--loss)}
+.up{color:var(--gain)}.down{color:var(--loss)}
+.muted{color:var(--muted)}
+h2{font:600 20px/1.3 var(--serif);margin:0 0 8px}
+button,select,input{font:inherit}
+button{cursor:pointer}
+input,select{color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:12px;min-width:0;width:100%}
+.btn{background:var(--accent);color:var(--on-accent);border:0;border-radius:8px;padding:12px 20px;font-weight:600}
+.link{background:none;border:0;color:var(--muted);padding:8px;text-decoration:underline}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* converter */
+.conv{padding:32px 0 24px}
+.fields{display:grid;gap:16px;grid-template-columns:1fr;align-items:end}
+@media (min-width:860px){.fields{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto minmax(0,1fr)}}
+.field label{display:block;color:var(--muted);font-size:14px;margin-bottom:4px}
+.field input,.field select{height:56px}
+.field input{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.swapwrap{display:flex;justify-content:center}
+.result{margin-top:32px}
+.lead{color:var(--muted)}
+.big{font:600 clamp(36px,7vw,60px)/1.1 var(--sans);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;margin-top:4px;overflow-wrap:anywhere}
+.pair{margin-top:8px;font-variant-numeric:tabular-nums}
+.small{color:var(--muted);font-size:14px;margin-top:8px}
+
+.seg{display:flex;gap:4px}
+.seg button{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:8px 12px;font-weight:600}
+.seg button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.srcrow{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:16px}
+
+/* chart */
+.chartsec{padding:24px 0;border-top:1px solid var(--rule)}
+.ranges{display:flex;gap:4px;margin:8px 0}
+.ranges button{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:8px 12px;font-weight:600}
+.ranges button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+#readout{color:var(--muted);font-size:14px;min-height:24px;font-variant-numeric:tabular-nums}
+#chart{display:block;touch-action:pan-y}
+.gl{stroke:var(--rule);stroke-width:1}
+.axis{fill:var(--muted);font:12px var(--sans)}
+.cline{fill:none;stroke:var(--ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.vline{stroke:var(--muted);stroke-width:1}
+.dot{fill:var(--accent)}
+.sline{fill:none;stroke:var(--ink);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
+
+/* table */
+.tablesec{padding:24px 0;border-top:1px solid var(--rule)}
+.thead{display:flex;flex-wrap:wrap;gap:16px;align-items:end;justify-content:space-between;margin-bottom:8px}
+.thead .field{min-width:240px}
+.cols,.row{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1.2fr) 88px 88px 104px;gap:16px;align-items:center}
+.cols{color:var(--muted);font-size:14px;padding:8px 0;border-bottom:1px solid var(--rule)}
+.row{padding:12px 0;border-bottom:1px solid var(--rule)}
+.num{font-variant-numeric:tabular-nums;text-align:right}
+.cur{background:none;border:0;padding:0;color:inherit;text-align:left;min-width:0}
+.cur strong{margin-right:8px}
+.cur .nm{color:var(--muted);font-size:14px}
+.cur:hover strong{text-decoration:underline}
+@media (max-width:700px){
+  .cols,.row{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 72px;gap:12px}
+  .cols .h7,.cols .hs,.row .c7,.row .sp,.cur .nm{display:none}
+}
+
+
+/* dollar to naira panel */
+.nrates{padding:24px 0;border-top:1px solid var(--rule)}
+.nr-row{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:baseline;padding:16px 0;border-bottom:1px solid var(--rule)}
+.nr-row .lbl strong{display:block}
+.nr-row .lbl span{color:var(--muted);font-size:14px}
+.nr-row .val{font:600 22px/1.2 var(--sans);font-variant-numeric:tabular-nums;text-align:right}
+.nr-row .meta{color:var(--muted);font-size:14px;text-align:right}
+@media (max-width:700px){.nr-row{grid-template-columns:minmax(0,1fr) auto}.nr-row .meta{grid-column:1/-1;text-align:left}}
+#nrMsg.warn{color:var(--loss)}
+.nr-head{margin:16px 0 8px}
+
+.notice{padding:24px 0;border-top:1px solid var(--rule);max-width:75ch}
+.notice p+p{margin-top:8px}
+footer{color:var(--muted);font-size:14px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 class="brand">Currency Rates</h1>
+    <p id="status" role="status">Loading rates…</p>
+  </header>
+
+  <section class="conv" aria-label="Currency converter">
+    <div class="fields">
+      <div class="field"><label for="amt">Amount</label><input id="amt" inputmode="decimal" autocomplete="off" maxlength="16"></div>
+      <div class="field"><label for="from">From</label><select id="from"></select></div>
+      <div class="swapwrap"><button class="link" id="swap" type="button" aria-label="Swap the two currencies">Swap</button></div>
+      <div class="field"><label for="to">To</label><select id="to"></select></div>
+    </div>
+    <div class="srcrow" id="srcRow" hidden>
+      <span class="muted">Rate source</span>
+      <div class="seg" role="group" aria-label="Rate source">
+        <button type="button" data-src="live">Bybit P2P live</button>
+        <button type="button" data-src="ref">Daily reference</button>
+      </div>
+    </div>
+    <div class="result" aria-live="polite">
+      <p class="lead" id="resLead"></p>
+      <p class="big" id="resBig">—</p>
+      <p class="pair" id="res1"></p>
+      <p class="pair" id="res2"></p>
+      <p class="small" id="resSrc"></p>
+      <p class="small" id="xcheck"></p>
+    </div>
+  </section>
+
+  <section class="nrates" aria-label="Dollar to naira rates">
+    <h2>Dollar to naira</h2>
+    <p class="muted" id="nrSub">Live exchange and peer-to-peer prices beside the daily reference rate, each with its source and time.</p>
+    <div class="nr-head" aria-live="polite">
+      <p class="lead">Live dollar rate (estimate)</p>
+      <p class="big" id="nrBig">—</p>
+      <p class="small" id="nrBigSub"></p>
+    </div>
+    <div id="nrRows"></div>
+    <p class="small" id="nrMsg"></p>
+  </section>
+
+  <section class="chartsec">
+    <h2 id="chartTitle">Rate history</h2>
+    <div class="ranges" role="group" aria-label="Chart range">
+      <button type="button" data-days="7">7 days</button>
+      <button type="button" data-days="30">30 days</button>
+      <button type="button" data-days="90">90 days</button>
+    </div>
+    <p id="readout"></p>
+    <div id="chartWrap"><svg id="chart" role="img" aria-label="Exchange rate history chart"></svg></div>
+    <p class="small" id="chartNote"></p>
+  </section>
+
+  <section class="tablesec">
+    <div class="thead">
+      <div><h2>30 major currencies</h2><p class="muted" id="tsub">Price of 1 unit in your chosen currency.</p></div>
+      <div class="field"><label for="tbase">Compare against</label><select id="tbase"></select></div>
+    </div>
+    <div class="cols"><span>Currency</span><span class="num" id="hprice">Price</span><span class="num">24 hours</span><span class="num h7">7 days</span><span class="hs">Last 7 days</span></div>
+    <div id="rows"></div>
+    <p class="small" id="tmsg"></p>
+  </section>
+
+  <section class="notice">
+    <h2>About these rates</h2>
+    <p>These are daily global reference rates, not live trading prices. Banks, bureaus de change, and the parallel market in Nigeria can charge different rates, so check with your provider before you send or exchange money.</p>
+    <p>The live dollar rate is an estimate built from the Quidax exchange price and advertised peer-to-peer offers on Binance and Bybit, using USDT as a stand-in for the dollar. It is not an official or guaranteed rate. The Central Bank of Nigeria official rate and bureau de change quotes are not included yet.</p>
+    <p>Main source: the free currency-api dataset (fawazahmed0). Live rates: Quidax, Binance P2P and Bybit P2P, collected by this site's rates server. Cross-check: <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">Rates By Exchange Rate API</a>. For information only, not financial advice.</p>
+  </section>
+  <footer>Click any currency in the table to convert it.</footer>
+</div>
+
+<script>
+(() => {
+const MAJORS = ["NGN","USD","EUR","GBP","JPY","CNY","CAD","AUD","CHF","HKD","SGD","SEK","NOK","DKK","NZD","KRW","INR","MXN","BRL","ZAR","TRY","PLN","CZK","HUF","AED","SAR","THB","MYR","IDR","PHP","ILS"];
+const NS = "http://www.w3.org/2000/svg";
+const $ = (s) => document.querySelector(s);
+const h = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+const dn = (() => { try { return new Intl.DisplayNames(["en"], { type: "currency", fallback: "none" }); } catch { return null; } })();
+const nameOf = (c) => { try { return (dn && dn.of(c.toUpperCase())) || ""; } catch { return ""; } };
+
+const fmtVal = (n) => n >= 100 ? n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  : n >= 1 ? n.toLocaleString("en-US", { maximumFractionDigits: 4 })
+  : n.toLocaleString("en-US", { maximumSignificantDigits: 4 });
+const fmtMoney = (n, code) => {
+  if (code === "NGN") return "₦" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  try { return n.toLocaleString("en-US", { style: "currency", currency: code, maximumFractionDigits: Math.abs(n) >= 1 ? 2 : 6 }); }
+  catch { return fmtVal(n) + " " + code; }
+};
+const fmtPct = (n) => n == null || !isFinite(n) ? "—" : (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
+const dir = (n) => (n || 0) >= 0 ? "up" : "down";
+const dayStr = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+
+/* ---------- data ---------- */
+const cache = new Map();
+function getRates(base, date){
+  const key = base + "|" + date;
+  if (cache.has(key)) return cache.get(key);
+  const p = (async () => {
+    const urls = [
+      `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${date}/v1/currencies/${base}.min.json`,
+      `https://${date}.currency-api.pages.dev/v1/currencies/${base}.json`
+    ];
+    let last;
+    for (const u of urls){
+      try {
+        const r = await fetch(u);
+        if (!r.ok) throw new Error("status " + r.status);
+        const j = await r.json();
+        if (!j || !j[base]) throw new Error("unexpected data");
+        return j;
+      } catch (e){ last = e; }
+    }
+    throw last || new Error("request failed");
+  })();
+  cache.set(key, p); p.catch(() => cache.delete(key));
+  return p;
+}
+async function pool(items, n, fn){
+  const out = new Array(items.length); let i = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+    while (i < items.length){ const k = i++; try { out[k] = await fn(items[k]); } catch { out[k] = null; } }
+  }));
+  return out;
+}
+const xcache = new Map();
+function xrates(base){
+  if (!xcache.has(base)){
+    const p = fetch("https://open.er-api.com/v6/latest/" + base).then((r) => { if (!r.ok) throw new Error("status " + r.status); return r.json(); });
+    xcache.set(base, p); p.catch(() => xcache.delete(base));
+  }
+  return xcache.get(base);
+}
+
+let codes = [];
+let from = store.get("from", "USD"), to = store.get("to", "NGN"), amount = store.get("amount", "100");
+let tableBase = store.get("tbase", "NGN"), days = store.get("days", 30);
+let curRate = null, chartPts = [];
+let naira = null, useLive = store.get("useLive", true);
+
+function setStatus(text, isErr){ const s = $("#status"); s.textContent = text; s.className = isErr ? "err" : ""; }
+
+/* ---------- selects ---------- */
+const opt = (c) => { const o = document.createElement("option"); o.value = c; o.textContent = c + " - " + (nameOf(c) || c); return o; };
+function fillSelect(sel, value){
+  sel.textContent = "";
+  const g1 = document.createElement("optgroup"); g1.label = "Major currencies";
+  MAJORS.filter((c) => codes.includes(c)).forEach((c) => g1.appendChild(opt(c)));
+  const g2 = document.createElement("optgroup"); g2.label = "All other currencies";
+  codes.filter((c) => !MAJORS.includes(c)).sort((a, b) => nameOf(a).localeCompare(nameOf(b))).forEach((c) => g2.appendChild(opt(c)));
+  sel.append(g1, g2);
+  sel.value = codes.includes(value) ? value : "USD";
+}
+
+/* ---------- converter ---------- */
+function isUsdNgn(a, b){ return (a === "USD" && b === "NGN") || (a === "NGN" && b === "USD"); }
+// Live Bybit P2P rate for dollar-to-naira conversions (USDT stands in for the dollar).
+function p2pRate(a, b){
+  const y = naira && naira.bybit; if (!y) return null;
+  if (a === "USD" && b === "NGN") return { rate: y.sell.median, kind: "sell price, what you receive for dollars" };
+  if (a === "NGN" && b === "USD") return { rate: 1 / y.buy.median, kind: "buy price, what you pay for dollars" };
+  return null;
+}
+
+let convSeq = 0;
+async function convert(skipChart){
+  const seq = ++convSeq;
+  from = $("#from").value; to = $("#to").value; amount = $("#amt").value;
+  store.set("from", from); store.set("to", to); store.set("amount", amount);
+  const amt = parseFloat(String(amount).replace(/,/g, ""));
+  const usdNgn = isUsdNgn(from, to);
+  $("#srcRow").hidden = !usdNgn;
+  document.querySelectorAll("#srcRow button").forEach((b) => b.setAttribute("aria-pressed", String((b.dataset.src === "live") === useLive)));
+  try {
+    const f = from.toLowerCase(), t = to.toLowerCase();
+    const j = await getRates(f, "latest");
+    if (seq !== convSeq) return;
+    const r0 = j[f][t];
+    if (!(r0 > 0)) throw new Error("no rate for this pair");
+    const live = usdNgn && useLive ? p2pRate(from, to) : null;
+    const r = live ? live.rate : r0;
+    curRate = r0;
+    setStatus("Reference rates dated " + j.date + ". Daily reference rates, updated about once a day.", false);
+    $("#res1").textContent = `1 ${from} = ${fmtVal(r)} ${to}`;
+    $("#res2").textContent = `1 ${to} = ${fmtVal(1 / r)} ${from}`;
+    const refText = "Global reference rate from currency-api, dated " + j.date + ". Not a live, bank, or street rate.";
+    if (live) $("#resSrc").textContent = `Live Bybit P2P ${live.kind}, with USDT standing in for the dollar. Updated ${ago(naira.bybit.fetchedAt)}. Not a bank or official rate.`;
+    else if (usdNgn && useLive) $("#resSrc").textContent = (RATES_API ? "Bybit P2P is not available right now, so the daily reference rate is shown. " : "Bybit P2P is not connected yet, so the daily reference rate is shown. ") + refText;
+    else $("#resSrc").textContent = refText;
+    if (!(amt >= 0) || !isFinite(amt)){
+      $("#resLead").textContent = ""; $("#resBig").textContent = "—";
+      $("#resSrc").textContent = "Enter an amount to see the converted value.";
+    } else {
+      $("#resLead").textContent = `${amt.toLocaleString("en-US", { maximumFractionDigits: 6 })} ${nameOf(from) || from} equals`;
+      $("#resBig").textContent = fmtMoney(amt * r, to);
+    }
+    if (live){
+      const diff = (r / r0 - 1) * 100;
+      $("#xcheck").textContent = `Daily reference rate: 1 ${from} = ${fmtVal(r0)} ${to}. The Bybit P2P rate is ${Math.abs(diff).toFixed(2)}% ${diff >= 0 ? "above" : "below"} it.`;
+    } else crossCheck(seq);
+  } catch (e){
+    curRate = null;
+    $("#resBig").textContent = "—"; $("#resLead").textContent = ""; $("#res1").textContent = ""; $("#res2").textContent = ""; $("#xcheck").textContent = "";
+    $("#resSrc").textContent = "Couldn't load this rate (" + e.message + "). Check your internet connection and try again.";
+    setStatus("Couldn't load rates (" + e.message + ").", true);
+  }
+  if (!skipChart) loadChart();
+}
+
+async function crossCheck(seq){
+  const el = $("#xcheck"); el.textContent = "";
+  if (from === to || !curRate) return;
+  try {
+    const j = await xrates(from);
+    if (seq !== convSeq) return;
+    const other = j && j.rates && j.rates[to];
+    if (!(other > 0)) return;
+    const diff = (curRate / other - 1) * 100;
+    el.textContent = `Cross-check: Exchange Rate API shows 1 ${from} = ${fmtVal(other)} ${to}, a difference of ${Math.abs(diff).toFixed(2)}%.` +
+      (Math.abs(diff) > 1 ? " The two sources differ by more than 1%, so confirm with your bank or provider." : "") + " Rates By Exchange Rate API.";
+  } catch {}
+}
+
+/* ---------- chart ---------- */
+let chartSeq = 0;
+function markRanges(){ document.querySelectorAll(".ranges button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.days) === days))); }
+document.querySelectorAll(".ranges button").forEach((b) => b.onclick = () => { days = Number(b.dataset.days); store.set("days", days); markRanges(); loadChart(); });
+
+async function loadChart(){
+  const seq = ++chartSeq, note = $("#chartNote"), svg = $("#chart");
+  $("#chartTitle").textContent = `${from} to ${to}, last ${days} days`;
+  if (from === to){ svg.textContent = ""; $("#readout").textContent = ""; note.textContent = "Choose two different currencies to see a chart."; return; }
+  note.textContent = `Loading ${days} days of rates…`;
+  const f = from.toLowerCase(), t = to.toLowerCase(), step = days <= 30 ? 1 : 3;
+  const dates = []; for (let n = days; n >= 1; n -= step) dates.push(dayStr(n)); dates.push("latest");
+  const res = await pool(dates, 6, (d) => getRates(f, d));
+  if (seq !== chartSeq) return;
+  const m = new Map();
+  res.forEach((j) => { if (j && j[f] && j[f][t] > 0 && j.date) m.set(j.date, j[f][t]); });
+  chartPts = [...m.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([d, v]) => [Date.parse(d + "T00:00:00Z"), v]);
+  if (chartPts.length < 2){ svg.textContent = ""; $("#readout").textContent = ""; note.textContent = "Not enough history for this pair yet. The data source starts in March 2024."; return; }
+  note.textContent = "Daily rates. Each point is one day."; drawChart();
+}
+
+function drawChart(){
+  const svg = $("#chart"); svg.textContent = "";
+  if (chartPts.length < 2) return;
+  const W = Math.max($("#chartWrap").clientWidth, 280), H = 280;
+  const padL = W < 480 ? 64 : 80, padR = 8, padT = 12, padB = 28;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", W); svg.setAttribute("height", H);
+  const ts = chartPts.map((p) => p[0]), vs = chartPts.map((p) => p[1]);
+  const t0 = ts[0], t1 = ts[ts.length - 1];
+  let min = Math.min(...vs), max = Math.max(...vs); if (min === max){ min *= 0.999; max *= 1.001; }
+  const X = (t) => padL + (t - t0) / (t1 - t0 || 1) * (W - padL - padR);
+  const Y = (v) => padT + (1 - (v - min) / (max - min)) * (H - padT - padB);
+  const axisFmt = (v) => v.toLocaleString("en-US", { maximumSignificantDigits: 5 });
+  [max, (max + min) / 2, min].forEach((v) => {
+    svg.appendChild(svgEl("line", { x1: padL, x2: W - padR, y1: Y(v), y2: Y(v), class: "gl" }));
+    const tx = svgEl("text", { x: padL - 8, y: Y(v) + 4, "text-anchor": "end", class: "axis" }); tx.textContent = axisFmt(v); svg.appendChild(tx);
+  });
+  const fmtD = (t) => new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const a = svgEl("text", { x: padL, y: H - 8, "text-anchor": "start", class: "axis" }); a.textContent = fmtD(t0); svg.appendChild(a);
+  const b = svgEl("text", { x: W - padR, y: H - 8, "text-anchor": "end", class: "axis" }); b.textContent = fmtD(t1); svg.appendChild(b);
+  svg.appendChild(svgEl("path", { d: chartPts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1)).join(" "), class: "cline" }));
+  const vline = svgEl("line", { y1: padT, y2: H - padB, class: "vline" }), dot = svgEl("circle", { r: 5, class: "dot" });
+  vline.style.display = dot.style.display = "none"; svg.append(vline, dot);
+  const pct = (vs[vs.length - 1] / vs[0] - 1) * 100;
+  const readout = $("#readout"), idle = `Over this period, 1 ${from} moved ${fmtPct(pct)} against ${to}. Hover over the chart to see a day.`;
+  readout.textContent = idle;
+  svg.onpointermove = (e) => {
+    const x = e.clientX - svg.getBoundingClientRect().left;
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < chartPts.length; i++){ const dd = Math.abs(X(chartPts[i][0]) - x); if (dd < bd){ bd = dd; best = i; } }
+    const p = chartPts[best], px = X(p[0]), py = Y(p[1]);
+    vline.setAttribute("x1", px); vline.setAttribute("x2", px); dot.setAttribute("cx", px); dot.setAttribute("cy", py);
+    vline.style.display = dot.style.display = "";
+    readout.textContent = `1 ${from} = ${fmtVal(p[1])} ${to} on ${new Date(p[0]).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
+  };
+  svg.onpointerleave = () => { vline.style.display = dot.style.display = "none"; readout.textContent = idle; };
+}
+let rsT = 0;
+window.addEventListener("resize", () => { clearTimeout(rsT); rsT = setTimeout(drawChart, 150); });
+
+/* ---------- table ---------- */
+function spark(vals, w, hh){
+  const svg = svgEl("svg", { viewBox: `0 0 ${w} ${hh}`, width: w, height: hh, "aria-hidden": "true" });
+  if (vals.length < 2) return svg;
+  const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1, pad = 2;
+  const d = vals.map((v, i) => (i ? "L" : "M") + (pad + i / (vals.length - 1) * (w - 2 * pad)).toFixed(1) + " " + (hh - pad - (v - min) / span * (hh - 2 * pad)).toFixed(1)).join(" ");
+  svg.appendChild(svgEl("path", { d, class: "sline" }));
+  return svg;
+}
+
+let tblSeq = 0;
+async function loadTable(){
+  const seq = ++tblSeq, B = tableBase.toLowerCase();
+  $("#tmsg").textContent = "Loading rates…";
+  $("#hprice").textContent = `Price in ${tableBase}`;
+  $("#tsub").textContent = `Price of 1 unit of each currency in ${tableBase}. Up means the currency costs more in ${tableBase}.`;
+  try {
+    const dates = ["latest", ...Array.from({ length: 7 }, (_, i) => dayStr(i + 1))];
+    const files = await pool(dates, 4, (d) => getRates(B, d));
+    if (seq !== tblSeq) return;
+    const byDate = new Map();
+    files.forEach((f) => { if (f && f[B] && f.date) byDate.set(f.date, f[B]); });
+    const series = [...byDate.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1);
+    if (!series.length) throw new Error("no data");
+    const box = $("#rows"); box.textContent = "";
+    MAJORS.filter((c) => c !== tableBase).slice(0, 30).forEach((c) => {
+      const key = c.toLowerCase();
+      const vals = series.map(([, r]) => r[key]).filter((v) => v > 0).map((v) => 1 / v);
+      if (!vals.length) return;
+      const n = vals.length, now = vals[n - 1];
+      const d1 = n >= 2 ? (now / vals[n - 2] - 1) * 100 : null;
+      const d7 = n >= 2 ? (now / vals[0] - 1) * 100 : null;
+      const row = h("div", "row");
+      const cur = h("button", "cur"); cur.type = "button";
+      cur.setAttribute("aria-label", `Convert ${c} to ${tableBase}`);
+      cur.append(h("strong", null, c), h("span", "nm", nameOf(c)));
+      cur.onclick = () => { $("#from").value = c; $("#to").value = tableBase; convert(); $(".conv").scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); };
+      const sp = h("div", "sp"); sp.appendChild(spark(vals, 96, 28));
+      row.append(cur, h("div", "num", fmtVal(now)), h("div", "num " + dir(d1), d1 == null ? "—" : (d1 >= 0 ? "▲ " : "▼ ") + fmtPct(d1)), h("div", "num c7 " + dir(d7), fmtPct(d7)), sp);
+      box.appendChild(row);
+    });
+    $("#tmsg").textContent = `Rates dated ${series[series.length - 1][0]}. Changes compare with the previous day and about 7 days earlier.`;
+  } catch (e){
+    $("#tmsg").textContent = "Couldn't load the table (" + e.message + "). Check your internet connection and refresh.";
+  }
+}
+
+/* ---------- dollar to naira (needs the rates server) ---------- */
+// Paste your Worker address between the quotes, for example "https://naira-rates-api.yourname.workers.dev"
+const RATES_API = "";
+
+function ago(iso){
+  const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
+  return s < 60 ? s + " sec ago" : s < 3600 ? Math.round(s / 60) + " min ago" : Math.round(s / 3600) + " h ago";
+}
+function nrRow(label, desc, value, meta){
+  const row = h("div", "nr-row");
+  const l = h("div", "lbl"); l.append(h("strong", null, label), h("span", null, desc));
+  row.append(l, h("div", "val", value), h("div", "meta", meta));
+  return row;
+}
+async function loadNaira(){
+  const rows = $("#nrRows"), msg = $("#nrMsg"), big = $("#nrBig"), sub = $("#nrBigSub");
+  msg.className = "small";
+  if (!RATES_API){
+    rows.textContent = ""; big.textContent = "—"; sub.textContent = "";
+    msg.textContent = "Live rates are not connected yet. Add your rates server address in the page code (see the setup guide).";
+    return;
+  }
+  try {
+    const r = await fetch(RATES_API.replace(/\/+$/, "") + "/api/rates/ngn");
+    if (!r.ok) throw new Error("status " + r.status);
+    const d = await r.json();
+    naira = d;
+    rows.textContent = ""; const notes = [];
+    const c = d.combined;
+    if (c){
+      big.textContent = "₦" + fmtVal(c.mid);
+      const times = [d.exchange && d.exchange.fetchedAt, d.p2p && d.p2p.fetchedAt].filter(Boolean).sort();
+      sub.textContent = (c.sources.length > 1 ? "Middle of " + c.sources.join(" and ") + (c.spreadPct != null ? ", which differ by " + c.spreadPct.toFixed(2) + "%" : "") : "From " + c.sources[0] + " only")
+        + ". Oldest data " + ago(times[0]) + ". Estimate only, not a bank or official rate.";
+    } else {
+      big.textContent = "—"; sub.textContent = "No live source is available right now.";
+    }
+    if (d.exchange){
+      const x = d.exchange;
+      const range = x.bid && x.ask ? `Buy side ₦${fmtVal(x.bid)}, sell side ₦${fmtVal(x.ask)}.` : "";
+      rows.appendChild(nrRow("Exchange price, Quidax USDT/NGN", "A live price on a Nigerian exchange, with USDT standing in for the dollar. " + range, "₦" + fmtVal(x.mid), "Quidax, " + ago(x.fetchedAt) + (x.stale ? ", may be out of date" : "")));
+    } else notes.push("The Quidax exchange price is unavailable" + (d.errors && d.errors.exchange ? " (" + d.errors.exchange + ")" : "") + ".");
+    if (d.p2p){
+      const p = d.p2p, when = "Binance P2P, " + ago(p.fetchedAt) + (p.stale ? ", may be out of date" : "");
+      rows.appendChild(nrRow("P2P buy price (you pay)", `Cost of 1 USDT. Range ₦${fmtVal(p.buy.min)} to ₦${fmtVal(p.buy.max)} from ${p.buy.count} offers.`, "₦" + fmtVal(p.buy.median), when));
+      rows.appendChild(nrRow("P2P sell price (you receive)", `Value of 1 USDT. Range ₦${fmtVal(p.sell.min)} to ₦${fmtVal(p.sell.max)} from ${p.sell.count} offers.`, "₦" + fmtVal(p.sell.median), when));
+    } else notes.push("The peer-to-peer rate is unavailable" + (d.errors && d.errors.p2p ? " (" + d.errors.p2p + ")" : "") + ".");
+    if (d.bybit){
+      const y = d.bybit, when = "Bybit P2P, " + ago(y.fetchedAt) + (y.stale ? ", may be out of date" : "");
+      rows.appendChild(nrRow("Bybit P2P buy price (you pay)", `Cost of 1 USDT. Range ₦${fmtVal(y.buy.min)} to ₦${fmtVal(y.buy.max)} from ${y.buy.count} offers.`, "₦" + fmtVal(y.buy.median), when));
+      rows.appendChild(nrRow("Bybit P2P sell price (you receive)", `Value of 1 USDT. Range ₦${fmtVal(y.sell.min)} to ₦${fmtVal(y.sell.max)} from ${y.sell.count} offers.`, "₦" + fmtVal(y.sell.median), when));
+    } else notes.push("The Bybit P2P price is unavailable" + (d.errors && d.errors.bybit ? " (" + d.errors.bybit + ")" : "") + ".");
+    if (d.reference){
+      rows.appendChild(nrRow("Daily reference rate", "1 US dollar. Global rate from currency-api, updated once a day.", "₦" + fmtVal(d.reference.usdNgn), "Dated " + d.reference.date));
+      if (c && c.premiumPct != null) rows.appendChild(nrRow("Live rate compared with reference", "How far the live estimate sits from the daily reference rate.", fmtPct(c.premiumPct), ""));
+    } else notes.push("The reference rate is unavailable right now.");
+    (d.flags || []).forEach((f) => notes.push(f));
+    if (notes.length){ msg.textContent = notes.join(" "); msg.className = "small warn"; }
+    else msg.textContent = "Exchange and peer-to-peer prices are not official rates. They refresh about every 30 seconds while this page is open.";
+    if (isUsdNgn(from, to) && codes.length) convert(true);
+  } catch (e){
+    rows.textContent = ""; big.textContent = "—"; sub.textContent = "";
+    msg.className = "small warn";
+    msg.textContent = "Couldn't reach the rates server (" + e.message + "). Check the server address and your internet connection.";
+  }
+}
+
+/* ---------- init ---------- */
+async function init(){
+  $("#amt").value = amount;
+  markRanges();
+  try {
+    const j = await getRates("ngn", "latest");
+    const set = new Set(Object.keys(j.ngn).map((c) => c.toUpperCase()).filter((c) => nameOf(c) || MAJORS.includes(c)));
+    set.add("NGN"); codes = [...set];
+  } catch (e){
+    setStatus("Couldn't load rates (" + e.message + "). Check your internet connection and refresh.", true);
+    return;
+  }
+  fillSelect($("#from"), from); fillSelect($("#to"), to); fillSelect($("#tbase"), tableBase);
+  tableBase = $("#tbase").value;
+  $("#amt").addEventListener("input", () => convert());
+  $("#from").addEventListener("change", () => convert());
+  $("#to").addEventListener("change", () => convert());
+  $("#swap").onclick = () => { const a = $("#from").value; $("#from").value = $("#to").value; $("#to").value = a; convert(); };
+  $("#tbase").addEventListener("change", () => { tableBase = $("#tbase").value; store.set("tbase", tableBase); loadTable(); });
+  document.querySelectorAll("#srcRow button").forEach((b) => b.onclick = () => { useLive = b.dataset.src === "live"; store.set("useLive", useLive); convert(true); });
+  convert(); loadTable(); loadNaira();
+  setInterval(loadNaira, 30000);
+  setInterval(() => {
+    for (const k of [...cache.keys()]) if (k.endsWith("|latest")) cache.delete(k);
+    xcache.clear(); convert(); loadTable();
+  }, 3600000);
+}
+init();
+})();
+</script>
+</body>
+</html>
