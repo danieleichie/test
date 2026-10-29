@@ -6,15 +6,19 @@
 <title>Currency Rates</title>
 <style>
 :root{
-  --bg:#EEF2F1; --surface:#FFFFFF; --ink:#12263A; --muted:#5B6B7A; --rule:#D5DDDB;
-  --accent:#2B50F0; --on-accent:#FFFFFF; --gain:#0F7A55; --loss:#C2391F;
+  --bg:#F3F8F1; --surface:#FFFFFF; --ink:#10281F; --muted:#4F6358; --rule:#D1DDD3;
+  --brand:#0A5C2E; --green:#0B7A3B; --green-deep:#0A5C2E;
+  --blue:#1D4ED8; --yellow:#FFC928; --yellow-soft:#FFF3C4; --on-yellow:#10281F;
+  --accent:#1D4ED8; --on-accent:#FFFFFF; --gain:#0B7A3B; --loss:#1D4ED8;
   --serif: ui-serif, "New York", Georgia, "Times New Roman", serif;
   --sans: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --bg:#0E1A24; --surface:#152633; --ink:#E6EEF2; --muted:#93A4B1; --rule:#27394A;
-    --accent:#7C98FF; --on-accent:#0E1A24; --gain:#3DD598; --loss:#FF8A6B;
+    --bg:#0B1812; --surface:#112419; --ink:#E7F2EA; --muted:#9BB4A5; --rule:#22402F;
+    --brand:#4ADE80; --green:#4ADE80; --green-deep:#0F3D22;
+    --blue:#8AB4FF; --yellow:#FFD54A; --yellow-soft:#3A3410; --on-yellow:#10281F;
+    --accent:#8AB4FF; --on-accent:#0B1812; --gain:#4ADE80; --loss:#8AB4FF;
   }
 }
 *{box-sizing:border-box}
@@ -23,10 +27,10 @@ html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans)}
 .wrap{max-width:1040px;margin:0 auto;padding:24px}
 p{margin:0}
-header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--rule)}
-.brand{font:600 22px/1.2 var(--serif);margin:0}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;padding-bottom:16px;border-bottom:3px solid var(--yellow)}
+.brand{font:600 22px/1.2 var(--serif);margin:0;color:var(--brand)}
 #status{color:var(--muted);font-size:14px;max-width:64ch}
-#status.err{color:var(--loss)}
+#status.err,#nrMsg.warn{background:var(--yellow-soft);border-left:4px solid var(--yellow);padding:8px 12px;color:var(--ink)}
 .up{color:var(--gain)}.down{color:var(--loss)}
 .muted{color:var(--muted)}
 h2{font:600 20px/1.3 var(--serif);margin:0 0 8px}
@@ -66,10 +70,10 @@ a{color:var(--accent)}
 #chart{display:block;touch-action:pan-y}
 .gl{stroke:var(--rule);stroke-width:1}
 .axis{fill:var(--muted);font:12px var(--sans)}
-.cline{fill:none;stroke:var(--ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.cline{fill:none;stroke:var(--green);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .vline{stroke:var(--muted);stroke-width:1}
 .dot{fill:var(--accent)}
-.sline{fill:none;stroke:var(--ink);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
+.sline{fill:none;stroke:var(--green);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
 
 /* table */
 .tablesec{padding:24px 0;border-top:1px solid var(--rule)}
@@ -97,8 +101,58 @@ a{color:var(--accent)}
 .nr-row .val{font:600 22px/1.2 var(--sans);font-variant-numeric:tabular-nums;text-align:right}
 .nr-row .meta{color:var(--muted);font-size:14px;text-align:right}
 @media (max-width:700px){.nr-row{grid-template-columns:minmax(0,1fr) auto}.nr-row .meta{grid-column:1/-1;text-align:left}}
-#nrMsg.warn{color:var(--loss)}
-.nr-head{margin:16px 0 8px}
+
+/* live hero */
+.hero{background:var(--green-deep);color:#fff;border-radius:16px;padding:24px;margin-top:24px}
+.hero :focus-visible{outline-color:var(--yellow)}
+.hero-top{display:flex;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;align-items:center}
+.hero-label{display:flex;align-items:center;gap:8px;font-weight:600}
+.livedot{width:10px;height:10px;border-radius:50%;background:var(--yellow);flex:none;animation:pulse 1.6s ease-out infinite}
+.livedot.off{animation:none;background:rgba(255,255,255,.5)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,201,40,.6)}100%{box-shadow:0 0 0 10px rgba(255,201,40,0)}}
+.hero-time{color:rgba(255,255,255,.85);font-size:14px;font-variant-numeric:tabular-nums}
+.hero-main{display:grid;gap:24px;grid-template-columns:1fr;align-items:end;margin-top:16px}
+@media (min-width:860px){.hero-main{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.hero-num{display:inline-block;font:600 clamp(44px,9vw,72px)/1.05 var(--sans);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;border-radius:8px}
+.hero-num.flash{animation:flash .9s ease-out}
+@keyframes flash{0%{background:rgba(255,201,40,.5)}100%{background:transparent}}
+.hero-chg{margin-top:8px;display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center}
+.hero-chg .grp{display:flex;gap:8px;align-items:center;font-size:14px;color:rgba(255,255,255,.9)}
+.chip{display:inline-block;padding:2px 10px;border-radius:8px;font-weight:600;font-size:16px;font-variant-numeric:tabular-nums}
+.chip.up{background:var(--yellow);color:var(--on-yellow)}
+.chip.down{background:#fff;color:#10281F}
+.hero-sub{color:rgba(255,255,255,.85);font-size:14px;margin-top:8px;max-width:62ch}
+.hero-spark svg{display:block;width:100%;height:96px}
+.hero-spark .cap{color:rgba(255,255,255,.85);font-size:14px;margin-top:4px}
+.hspline{fill:none;stroke:var(--yellow);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.hero-src{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:24px;border-top:1px solid rgba(255,255,255,.25)}
+.hero-src>div{padding:12px 12px 0 0}
+.hero-src>div+div{padding-left:12px;border-left:1px solid rgba(255,255,255,.25)}
+.hero-src .k{font-size:14px;color:rgba(255,255,255,.85)}
+.hero-src .v{font-weight:600;font-variant-numeric:tabular-nums}
+.hero-src .na{color:var(--yellow);font-weight:600}
+@media (max-width:640px){.hero-src{grid-template-columns:1fr}.hero-src>div+div{padding-left:0;border-left:0;border-top:1px solid rgba(255,255,255,.25)}.hero-src>div{padding:12px 0}}
+@media (prefers-reduced-motion:reduce){.livedot,.hero-num.flash{animation:none}}
+
+/* assistant */
+.chat-launch{position:fixed;right:16px;bottom:16px;z-index:50;background:var(--yellow);color:var(--on-yellow);border:0;border-radius:16px;padding:14px 20px;font-weight:700}
+.chat-launch:focus-visible{outline-color:var(--accent)}
+.chat{position:fixed;right:16px;bottom:16px;z-index:60;width:min(400px,calc(100vw - 32px));height:min(580px,calc(100vh - 32px));background:var(--surface);border:1px solid var(--rule);border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
+.chat-head{background:var(--green-deep);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.chat-head :focus-visible{outline-color:var(--yellow)}
+.chat-head h2{margin:0;font:600 18px/1.3 var(--serif)}
+.chat-head .sub{font-size:13px;color:rgba(255,255,255,.85)}
+.chat-head button{background:none;border:0;color:#fff;text-decoration:underline;padding:8px}
+#clog{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.cm{max-width:90%;white-space:pre-wrap;overflow-wrap:anywhere;padding:8px 12px;border-radius:12px}
+.cm.u{align-self:flex-end;background:var(--accent);color:var(--on-accent)}
+.cm.a{align-self:flex-start;background:var(--bg);border-left:3px solid var(--yellow)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 8px}
+.chips button{background:none;border:1px solid var(--rule);border-radius:8px;padding:6px 10px;color:var(--ink);font-size:14px;text-align:left}
+.chips button:hover{background:var(--yellow-soft)}
+.cform{display:flex;gap:8px;border-top:1px solid var(--rule);padding:12px}
+.cform input{flex:1;width:auto}
+.cnote{color:var(--muted);font-size:12px;padding:0 16px 12px}
 
 .notice{padding:24px 0;border-top:1px solid var(--rule);max-width:75ch}
 .notice p+p{margin-top:8px}
@@ -111,6 +165,24 @@ footer{color:var(--muted);font-size:14px;margin-top:8px}
     <h1 class="brand">Currency Rates</h1>
     <p id="status" role="status">Loading rates…</p>
   </header>
+
+  <section class="hero" aria-label="Live dollar rate in naira">
+    <div class="hero-top">
+      <p class="hero-label"><span class="livedot off" id="heroDot" aria-hidden="true"></span><span id="heroTag">Loading</span><span>US dollar in naira</span></p>
+      <p class="hero-time" id="heroTime"></p>
+    </div>
+    <div class="hero-main">
+      <div aria-live="polite">
+        <p class="hero-num" id="heroNum">—</p>
+        <div class="hero-chg" id="heroChg"></div>
+        <p class="hero-sub" id="heroSub"></p>
+      </div>
+      <div class="hero-spark">
+        <div id="heroSpark" role="img" aria-label="Dollar to naira live rate during this visit"></div>
+      </div>
+    </div>
+    <div class="hero-src" id="heroSrc"></div>
+  </section>
 
   <section class="conv" aria-label="Currency converter">
     <div class="fields">
@@ -139,11 +211,6 @@ footer{color:var(--muted);font-size:14px;margin-top:8px}
   <section class="nrates" aria-label="Dollar to naira rates">
     <h2>Dollar to naira</h2>
     <p class="muted" id="nrSub">Live exchange and peer-to-peer prices beside the daily reference rate, each with its source and time.</p>
-    <div class="nr-head" aria-live="polite">
-      <p class="lead">Live dollar rate (estimate)</p>
-      <p class="big" id="nrBig">—</p>
-      <p class="small" id="nrBigSub"></p>
-    </div>
     <div id="nrRows"></div>
     <p class="small" id="nrMsg"></p>
   </section>
@@ -172,12 +239,27 @@ footer{color:var(--muted);font-size:14px;margin-top:8px}
 
   <section class="notice">
     <h2>About these rates</h2>
-    <p>These are daily global reference rates, not live trading prices. Banks, bureaus de change, and the parallel market in Nigeria can charge different rates, so check with your provider before you send or exchange money.</p>
+    <p>The table, chart, and converter use daily global reference rates, not live trading prices. The assistant answers with data from this page and can make mistakes. Banks, bureaus de change, and the parallel market in Nigeria can charge different rates, so check with your provider before you send or exchange money.</p>
     <p>The live dollar rate is an estimate built from the Quidax exchange price and advertised peer-to-peer offers on Binance and Bybit, using USDT as a stand-in for the dollar. It is not an official or guaranteed rate. The Central Bank of Nigeria official rate and bureau de change quotes are not included yet.</p>
     <p>Main source: the free currency-api dataset (fawazahmed0). Live rates: Quidax, Binance P2P and Bybit P2P, collected by this site's rates server. Cross-check: <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">Rates By Exchange Rate API</a>. For information only, not financial advice.</p>
   </section>
   <footer>Click any currency in the table to convert it.</footer>
 </div>
+
+<button class="chat-launch" id="chatOpen" type="button" aria-haspopup="dialog">Ask the assistant</button>
+<aside class="chat" id="chat" role="dialog" aria-label="Rate assistant" hidden>
+  <div class="chat-head">
+    <div><h2>Rate assistant</h2><p class="sub" id="chatMode">Answers use the rates on this page</p></div>
+    <button type="button" id="chatClose">Close</button>
+  </div>
+  <div id="clog" aria-live="polite"></div>
+  <div class="chips" id="chips"></div>
+  <form class="cform" id="cform">
+    <input id="cq" maxlength="400" autocomplete="off" aria-label="Your question" placeholder="Ask about any rate">
+    <button class="btn" id="csend">Send</button>
+  </form>
+  <p class="cnote">Information only, not financial advice. Rates are estimates and the assistant can make mistakes.</p>
+</aside>
 
 <script>
 (() => {
@@ -410,7 +492,7 @@ async function loadTable(){
   const seq = ++tblSeq, B = tableBase.toLowerCase();
   $("#tmsg").textContent = "Loading rates…";
   $("#hprice").textContent = `Price in ${tableBase}`;
-  $("#tsub").textContent = `Price of 1 unit of each currency in ${tableBase}. Up means the currency costs more in ${tableBase}.`;
+  $("#tsub").textContent = `Price of 1 unit of each currency in ${tableBase}. Up means the currency costs more in ${tableBase}. These are daily rates. Only dollar to naira has live updates.`;
   try {
     const dates = ["latest", ...Array.from({ length: 7 }, (_, i) => dayStr(i + 1))];
     const files = await pool(dates, 4, (d) => getRates(B, d));
@@ -457,10 +539,10 @@ function nrRow(label, desc, value, meta){
   return row;
 }
 async function loadNaira(){
-  const rows = $("#nrRows"), msg = $("#nrMsg"), big = $("#nrBig"), sub = $("#nrBigSub");
+  const rows = $("#nrRows"), msg = $("#nrMsg");
   msg.className = "small";
   if (!RATES_API){
-    rows.textContent = ""; big.textContent = "—"; sub.textContent = "";
+    rows.textContent = ""; heroReference();
     msg.textContent = "Live rates are not connected yet. Add your rates server address in the page code (see the setup guide).";
     return;
   }
@@ -471,14 +553,7 @@ async function loadNaira(){
     naira = d;
     rows.textContent = ""; const notes = [];
     const c = d.combined;
-    if (c){
-      big.textContent = "₦" + fmtVal(c.mid);
-      const times = [d.exchange && d.exchange.fetchedAt, d.p2p && d.p2p.fetchedAt].filter(Boolean).sort();
-      sub.textContent = (c.sources.length > 1 ? "Middle of " + c.sources.join(" and ") + (c.spreadPct != null ? ", which differ by " + c.spreadPct.toFixed(2) + "%" : "") : "From " + c.sources[0] + " only")
-        + ". Oldest data " + ago(times[0]) + ". Estimate only, not a bank or official rate.";
-    } else {
-      big.textContent = "—"; sub.textContent = "No live source is available right now.";
-    }
+    lastPoll = Date.now(); pollOk = true; renderHeroLive(d);
     if (d.exchange){
       const x = d.exchange;
       const range = x.bid && x.ask ? `Buy side ₦${fmtVal(x.bid)}, sell side ₦${fmtVal(x.ask)}.` : "";
@@ -503,22 +578,184 @@ async function loadNaira(){
     else msg.textContent = "Exchange and peer-to-peer prices are not official rates. They refresh about every 30 seconds while this page is open.";
     if (isUsdNgn(from, to) && codes.length) convert(true);
   } catch (e){
-    rows.textContent = ""; big.textContent = "—"; sub.textContent = "";
+    rows.textContent = ""; heroFailed();
     msg.className = "small warn";
     msg.textContent = "Couldn't reach the rates server (" + e.message + "). Check the server address and your internet connection.";
   }
+}
+
+/* ---------- live hero: shows how the rate changes in real time ---------- */
+const POLL_MS = 30000;
+let lastPoll = 0, pollOk = true, liveHist = [];
+
+function deltaGroup(delta, base, label){
+  const g = h("span", "grp");
+  if (Math.abs(delta) < 0.005){ g.append(h("span", null, "No change " + label)); return g; }
+  const pct = (delta / base) * 100;
+  g.append(h("span", "chip " + (delta > 0 ? "up" : "down"), `${delta > 0 ? "▲" : "▼"} ₦${Math.abs(delta).toFixed(2)} (${fmtPct(pct)})`), h("span", null, label));
+  return g;
+}
+function heroSpark(){
+  const box = $("#heroSpark"); box.textContent = "";
+  const vals = liveHist.map((p) => p.mid);
+  const svg = svgEl("svg", { viewBox: "0 0 400 96", preserveAspectRatio: "none", "aria-hidden": "true" });
+  let cap = "Collecting live points. One arrives about every 30 seconds.";
+  if (vals.length >= 2){
+    const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
+    const d = vals.map((v, i) => (i ? "L" : "M") + (2 + i / (vals.length - 1) * 396).toFixed(1) + " " + (90 - (v - min) / span * 84).toFixed(1)).join(" ");
+    svg.appendChild(svgEl("path", { d, class: "hspline" }));
+    cap = `This visit: low ₦${fmtVal(min)}, high ₦${fmtVal(max)}. One point about every 30 seconds.`;
+  }
+  box.append(svg, h("p", "cap", cap));
+}
+function srcCell(name, ts, value, extra){
+  const c = h("div");
+  c.append(h("p", "k", ts ? `${name}, ${ago(ts)}` : name));
+  c.append(value ? h("p", "v", value) : h("p", "na", "Unavailable"));
+  if (extra) c.append(h("p", "k", extra));
+  return c;
+}
+function heroSources(d){
+  const box = $("#heroSrc"); box.textContent = ""; box.hidden = false;
+  const y = d.bybit, b = d.p2p, x = d.exchange;
+  box.append(
+    srcCell("Bybit P2P", y && y.fetchedAt, y && `₦${fmtVal(y.sell.median)} sell`, y && `₦${fmtVal(y.buy.median)} buy`),
+    srcCell("Binance P2P", b && b.fetchedAt, b && `₦${fmtVal(b.sell.median)} sell`, b && `₦${fmtVal(b.buy.median)} buy`),
+    srcCell("Quidax", x && x.fetchedAt, x && `₦${fmtVal(x.mid)}`, x && x.bid && x.ask ? `bid ₦${fmtVal(x.bid)}, ask ₦${fmtVal(x.ask)}` : "")
+  );
+}
+function renderHeroLive(d){
+  const c = d.combined;
+  if (!c){ heroSources(d); heroFailed("No live source is available right now."); return; }
+  const prev = liveHist.length ? liveHist[liveHist.length - 1].mid : null;
+  const first = liveHist.length ? liveHist[0].mid : null;
+  liveHist.push({ t: Date.now(), mid: c.mid }); if (liveHist.length > 120) liveHist.shift();
+  $("#heroDot").className = "livedot"; $("#heroTag").textContent = "Live";
+  const num = $("#heroNum"); num.textContent = "₦" + fmtVal(c.mid);
+  if (prev != null && c.mid !== prev){ num.classList.remove("flash"); void num.offsetWidth; num.classList.add("flash"); }
+  const chg = $("#heroChg"); chg.textContent = "";
+  if (prev != null) chg.appendChild(deltaGroup(c.mid - prev, prev, "since the last check"));
+  if (first != null && liveHist.length > 2) chg.appendChild(deltaGroup(c.mid - first, first, "since you opened this page"));
+  $("#heroSub").textContent = (c.sources.length > 1 ? "Middle of " + c.sources.join(", ") + (c.spreadPct != null ? ", which differ by " + c.spreadPct.toFixed(2) + "%" : "") : "From " + c.sources[0] + " only")
+    + ". USDT stands in for the dollar. An estimate, not a bank or official rate. Other currencies update once a day.";
+  heroSpark(); heroSources(d); tickHero();
+}
+async function heroReference(note){
+  $("#heroDot").className = "livedot off"; $("#heroTag").textContent = "Daily reference";
+  $("#heroChg").textContent = ""; $("#heroSrc").textContent = ""; $("#heroSrc").hidden = true;
+  try {
+    const j = await getRates("usd", "latest"), r = j.usd.ngn;
+    $("#heroNum").textContent = "₦" + fmtVal(r);
+    $("#heroSub").textContent = (note ? note + " " : "Live rates are not connected yet. ") + `Showing the global reference rate dated ${j.date}, which updates once a day.`;
+  } catch (e){
+    $("#heroNum").textContent = "—"; $("#heroSub").textContent = "Couldn't load the rate (" + e.message + "). Check your internet connection.";
+  }
+  heroSpark();
+  $("#heroSpark").lastChild.textContent = "The live chart starts when live rates are connected.";
+}
+function heroFailed(msg){
+  pollOk = false;
+  if (!liveHist.length){ heroReference(msg || "Couldn't reach the rates server."); return; }
+  $("#heroDot").className = "livedot off"; $("#heroTag").textContent = "Paused";
+  $("#heroSub").textContent = (msg || "Couldn't refresh the live rate.") + " Showing the last value. Retrying automatically.";
+}
+function tickHero(){
+  const el = $("#heroTime");
+  if (!lastPoll){ el.textContent = ""; return; }
+  const since = Math.max(0, Math.round((Date.now() - lastPoll) / 1000));
+  const next = Math.max(0, Math.round((POLL_MS - (Date.now() - lastPoll)) / 1000));
+  el.textContent = pollOk ? `Checked ${since} sec ago. Next check in ${next} sec.` : `Last successful check ${since} sec ago. Retrying.`;
+}
+
+/* ---------- assistant ---------- */
+const chatHist = [];
+let aiOn = !!RATES_API, chatBusy = false, greeted = false;
+const ALIAS = { dollar:"USD", dollars:"USD", usd:"USD", naira:"NGN", ngn:"NGN", euro:"EUR", euros:"EUR", pound:"GBP", pounds:"GBP", sterling:"GBP", yen:"JPY", yuan:"CNY", rmb:"CNY", rand:"ZAR", franc:"CHF", francs:"CHF", rupee:"INR", rupees:"INR" };
+function findCodes(text){
+  const out = [];
+  text.replace(/[^A-Za-z\s]/g, " ").split(/\s+/).forEach((w) => {
+    const lw = w.toLowerCase();
+    const c = ALIAS[lw] || (w.length === 3 && MAJORS.includes(w.toUpperCase()) && (lw !== "try" || w === "TRY") ? w.toUpperCase() : null);
+    if (c && out[out.length - 1] !== c) out.push(c);
+  });
+  return out;
+}
+async function basicAnswer(text){
+  const m = text.replace(/,/g, "").match(/(\d+(?:\.\d+)?)/);
+  const amt = m ? parseFloat(m[1]) : 1;
+  let cs = findCodes(text);
+  if (!cs.length) return "In basic mode I can convert amounts. Ask for example “100 USD to NGN” or “50000 naira to dollars”.";
+  if (cs.length === 1) cs = cs[0] === "NGN" ? ["NGN", "USD"] : [cs[0], "NGN"];
+  const [a, b] = cs;
+  if (a === b) return "Those are the same currency. Ask about two different ones.";
+  const f = a.toLowerCase(), t = b.toLowerCase();
+  const j = await getRates(f, "latest"), r0 = j[f][t];
+  if (!(r0 > 0)) return `I don't have a rate for ${a} to ${b}.`;
+  const live = isUsdNgn(a, b) ? p2pRate(a, b) : null, r = live ? live.rate : r0;
+  let out = `${amt.toLocaleString("en-US", { maximumFractionDigits: 6 })} ${a} = ${fmtMoney(amt * r, b)}.\n`;
+  out += live ? `Live Bybit P2P ${live.kind}, updated ${ago(naira.bybit.fetchedAt)}. Daily reference: 1 ${a} = ${fmtVal(r0)} ${b}.`
+              : `Daily reference rate dated ${j.date}: 1 ${a} = ${fmtVal(r0)} ${b}.`;
+  return out + "\nEstimates only, not a bank or official rate.";
+}
+async function askAssistant(text){
+  if (aiOn){
+    try {
+      const r = await fetch(RATES_API.replace(/\/+$/, "") + "/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: chatHist.slice(-8) }) });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.reply) return j.reply;
+      if (j.code === "not_configured"){ aiOn = false; setChatMode(); setChips(); return "The AI assistant isn't switched on yet, so I'm in basic mode.\n\n" + await basicAnswer(text); }
+      if (r.status === 429) return j.error || "You have asked a lot of questions. Please try again in a few minutes.";
+      throw new Error(j.error || "status " + r.status);
+    } catch (e){ return "I couldn't reach the assistant (" + e.message + "). Please try again in a moment."; }
+  }
+  return basicAnswer(text);
+}
+function addChat(cls, text){
+  const d = h("div", "cm " + cls, text);
+  const log = $("#clog"); log.appendChild(d); log.scrollTop = log.scrollHeight; return d;
+}
+function setChatMode(){ $("#chatMode").textContent = aiOn ? "Answers use live site data" : "Basic mode: simple conversions only"; }
+function setChips(){
+  const box = $("#chips"); box.textContent = "";
+  const list = ["Convert 100 USD to NGN", "What is the dollar rate in naira now?"];
+  if (aiOn) list.push("Why do the rates differ?", "How has the naira moved this month?");
+  list.forEach((q) => { const b = h("button", null, q); b.type = "button"; b.onclick = () => { box.textContent = ""; sendChat(q); }; box.appendChild(b); });
+}
+async function sendChat(text){
+  if (chatBusy) return;
+  chatBusy = true; $("#csend").disabled = true;
+  addChat("u", text); chatHist.push({ role: "user", content: text.slice(0, 400) });
+  const wait = addChat("a", "Checking…");
+  let reply;
+  try { reply = await askAssistant(text); } catch (e){ reply = "Something went wrong (" + (e.message || e) + "). Please try again."; }
+  wait.textContent = reply; chatHist.push({ role: "assistant", content: reply });
+  $("#clog").scrollTop = $("#clog").scrollHeight;
+  chatBusy = false; $("#csend").disabled = false; $("#cq").focus();
+}
+function openChat(){
+  $("#chat").hidden = false; $("#chatOpen").hidden = true; setChatMode();
+  if (!greeted){ greeted = true; addChat("a", "Hi. I can convert currencies and explain the rates on this page. What would you like to know?"); setChips(); }
+  $("#cq").focus();
+}
+function closeChat(){ $("#chat").hidden = true; $("#chatOpen").hidden = false; $("#chatOpen").focus(); }
+function wireChat(){
+  $("#chatOpen").onclick = openChat; $("#chatClose").onclick = closeChat;
+  $("#cform").addEventListener("submit", (e) => { e.preventDefault(); const t = $("#cq").value.trim(); if (!t) return; $("#cq").value = ""; sendChat(t); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#chat").hidden) closeChat(); });
 }
 
 /* ---------- init ---------- */
 async function init(){
   $("#amt").value = amount;
   markRanges();
+  wireChat(); setInterval(tickHero, 1000);
   try {
     const j = await getRates("ngn", "latest");
     const set = new Set(Object.keys(j.ngn).map((c) => c.toUpperCase()).filter((c) => nameOf(c) || MAJORS.includes(c)));
     set.add("NGN"); codes = [...set];
   } catch (e){
     setStatus("Couldn't load rates (" + e.message + "). Check your internet connection and refresh.", true);
+    heroReference();
     return;
   }
   fillSelect($("#from"), from); fillSelect($("#to"), to); fillSelect($("#tbase"), tableBase);
